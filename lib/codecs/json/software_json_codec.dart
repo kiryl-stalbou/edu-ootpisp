@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lab2/codec/_codec.dart';
+import 'package:lab2/codecs/software_codec.dart';
 import 'package:lab2/entities/_software.dart';
 
 final class SoftwareJsonCodec implements SoftwareCodec {

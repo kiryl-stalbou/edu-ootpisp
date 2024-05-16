@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import '_codec.dart';
-import '../entities/_software.dart';
+import '../software_codec.dart';
+import '../../entities/_software.dart';
 
 final class SoftwareBinaryCodec implements SoftwareCodec {
   static const _codec = StandardMessageCodec();

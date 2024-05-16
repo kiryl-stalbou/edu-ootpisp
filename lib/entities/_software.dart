@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 base class Software {
   const Software({
     required this.name,
