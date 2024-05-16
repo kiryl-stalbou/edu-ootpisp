@@ -5,7 +5,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:lab2/codecs/ffi/codec_ffi.dart';
+import 'package:lab2/codecs/ffi/software_ffi_codec.dart';
 import 'package:lab2/codecs/json/software_json_codec.dart';
 import 'package:lab2/codecs/software_codec.dart';
 import 'codecs/binary/software_binary_codec.dart';

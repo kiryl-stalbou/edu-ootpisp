@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'dart:ffi' as ffi;
-
 import 'package:ffi/ffi.dart';
 import 'package:lab2/codecs/software_codec.dart';
-
 import '../../entities/_software.dart';
 
 typedef DartWriteFunc = void Function(ffi.Pointer<Utf8>);
@@ -30,22 +28,22 @@ class CodecFFI implements SoftwareCodec {
     final writeffi =
         _dylib.lookupFunction<CppWriteFunc, DartWriteFunc>('write');
 
-    writeffi(string.toNativeUtf8());
+    final ffi.Pointer<Utf8> cString = string.toNativeUtf8();
+
+    writeffi(cString);
   }
 
   @override
   List<Software> read() {
     final readffi = _dylib.lookupFunction<CppReadFunc, DartReadFunc>('read');
 
-    final string = readffi().toString();
+    final ffi.Pointer<Utf8> cString = readffi();
 
-    print(string);
+    if (cString == ffi.nullptr) return [];
 
-    return [];
+    final string = cString.toDartString();
 
-    final jsons = jsonDecode(string) as List<Object>;
-
-    print(jsons);
+    final jsons = jsonDecode(string) as List<Object?>;
 
     return jsons
         .map((e) => Software.fromJson(e as Map<String, Object?>))
