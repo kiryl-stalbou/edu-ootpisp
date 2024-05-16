@@ -5,11 +5,16 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:lab2/codecs_ffi/codec_ffi.dart';
+import 'package:lab2/codecs/ffi/codec_ffi.dart';
+import 'package:lab2/codecs/json/software_json_codec.dart';
+import 'package:lab2/codecs/software_codec.dart';
+import 'codecs/binary/software_binary_codec.dart';
 import 'entities/_software.dart';
 import 'factories/software_macos_factory.dart';
 import 'factories/software_factory.dart';
 import 'factories/software_windows_factory.dart';
+
+// clang++ -dynamiclib -o example.dylib example.cpp
 
 void main() => runApp(const MyApp());
 
@@ -38,67 +43,83 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _software = <Software>[];
-  SoftwareFactory _softwareFactory = SoftwareWindowsFactory();
+  List<Software> _software = [];
 
-  final _supportedPlatforms = <Widget>[
-    Text('Windows'),
-    Text('MacOS'),
+  final List<SoftwareFactory> _availableSoftwareFactories = [
+    SoftwareWindowsFactory(),
+    SoftwareMacOSFactory(),
   ];
 
-  final _selectedPlatforms = <bool>[
-    true,
-    false,
+  final List<SoftwareCodec> _availableSoftwareCodecs = [
+    SoftwareJsonCodec(),
+    SoftwareBinaryCodec(),
   ];
 
-  late final List<File> _codecFiles;
+  late SoftwareFactory? _selectedSoftwareFactory =
+      _availableSoftwareFactories.firstOrNull;
 
-  late final List<Widget> _supportedCodecs =
-      _listCodecFiles().map((e) => e.path.split('/').last);
+  late SoftwareCodec? _selectedSoftwareCodec =
+      _availableSoftwareCodecs.firstOrNull;
 
-  late final List<bool> _selectedCodecs = <bool>[
-    true,
-    false,
-  ];
-
-  void _onPlatformSelected(int index) {
+  void _onSoftwareFactorySelected(int target) {
     setState(() {
-      for (int i = 0; i < _selectedPlatforms.length; i++) {
-        _selectedPlatforms[i] = i == index;
-      }
-
-      _softwareFactory =
-          index == 0 ? SoftwareWindowsFactory() : SoftwareMacOSFactory();
+      _selectedSoftwareFactory = _availableSoftwareFactories[target];
     });
   }
 
-  void _onCodecSelected(int index) {}
+  void _onSoftwareCodecSelected(int target) {
+    setState(() {
+      _selectedSoftwareCodec = _availableSoftwareCodecs[target];
+    });
 
-  void _addSoftware(Software software) =>
-      setState(() => _software.add(software));
+    _readSoftware();
+  }
 
-  void _clearSoftware() => setState(() => _software.clear());
+  void _readSoftware() {
+    if (_selectedSoftwareCodec == null) return;
 
-  List<File> _listCodecFiles() {
+    _software = _selectedSoftwareCodec!.read();
+  }
+
+  void _addSoftware(Software? software) {
+    if (software == null) return;
+
+    setState(() => _software.add(software));
+
+    _selectedSoftwareCodec?.write(_software);
+  }
+
+  void _clearSoftware() {
+    setState(() => _software.clear());
+
+    _selectedSoftwareCodec?.write(_software);
+  }
+
+  void _searchFFICodecFiles() {
     final systemEntities =
-        Directory('lib/codecs_ffi').listSync(recursive: true);
-
-    final codecFiles = <File>[];
+        Directory('lib/codecs/ffi').listSync(recursive: true);
 
     for (var systemEntity in systemEntities) {
-      if (systemEntity is File && systemEntity.path.endsWith('.dylib')) {
-        codecFiles.add(systemEntity);
+      if (systemEntity is File && systemEntity.path.endsWith('codec.dylib')) {
+        final parentDirectoryName = systemEntity.parent.path.split('/').last;
+
+        _availableSoftwareCodecs.add(
+          CodecFFI(
+            name: parentDirectoryName,
+            dylibPath: systemEntity.path,
+          ),
+        );
       }
     }
-
-    return codecFiles;
   }
 
   @override
   void initState() {
     super.initState();
 
-    _codecFiles = _listCodecFiles();
+    _searchFFICodecFiles();
+
+    _readSoftware();
   }
 
   @override
@@ -150,29 +171,42 @@ class _MyHomePageState extends State<MyHomePage> {
 
                       _ToggleButtons(
                         direction: Axis.horizontal,
-                        isSelected: _selec,
-                        onPressed: _onPlatformSelected,
-                        children: _supportedPlatforms,
+                        isSelected: _availableSoftwareFactories
+                            .map((e) => e == _selectedSoftwareFactory)
+                            .toList(),
+                        onPressed: _onSoftwareFactorySelected,
+                        children: _availableSoftwareFactories
+                            .map((e) => Text(e.name))
+                            .toList(),
                       ),
 
                       const SizedBox(height: 20),
 
-                      const Text('Current Codec'),
+                      if (_availableSoftwareCodecs.isEmpty)
+                        const Text('Codecs not found')
+                      else ...[
+                        //
+                        const Text('Current Codec'),
 
-                      const SizedBox(height: 5),
+                        const SizedBox(height: 5),
 
-                      _ToggleButtons(
-                        direction: Axis.vertical,
-                        isSelected: _selectedPlatforms,
-                        onPressed: _onPlatformSelected,
-                        children: _supportedPlatforms,
-                      ),
+                        _ToggleButtons(
+                          direction: Axis.vertical,
+                          isSelected: _availableSoftwareCodecs
+                              .map((e) => e == _selectedSoftwareCodec)
+                              .toList(),
+                          onPressed: _onSoftwareCodecSelected,
+                          children: _availableSoftwareCodecs
+                              .map((e) => Text(e.name))
+                              .toList(),
+                        ),
+                      ],
 
                       const SizedBox(height: 30),
 
                       ElevatedButton(
                         onPressed: () => _addSoftware(
-                          _softwareFactory.createMusicPlayer(),
+                          _selectedSoftwareFactory?.createMusicPlayer(),
                         ),
                         child: const Text('Create Music Player'),
                       ),
@@ -181,7 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                       ElevatedButton(
                         onPressed: () => _addSoftware(
-                          _softwareFactory.createInternetBrowser(),
+                          _selectedSoftwareFactory?.createInternetBrowser(),
                         ),
                         child: const Text('Create Internet Browser'),
                       ),
@@ -190,7 +224,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                       ElevatedButton(
                         onPressed: () => _addSoftware(
-                          _softwareFactory.createOperatingSystem(),
+                          _selectedSoftwareFactory?.createOperatingSystem(),
                         ),
                         child: const Text('Create Operating System'),
                       ),

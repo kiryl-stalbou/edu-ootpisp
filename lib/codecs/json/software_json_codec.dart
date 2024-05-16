@@ -6,7 +6,10 @@ import 'package:lab2/entities/_software.dart';
 
 final class SoftwareJsonCodec implements SoftwareCodec {
   static const _codec = JsonCodec();
-  static final _file = File('lib/out.json');
+  static final _file = File('lib/software.json');
+
+  @override
+  String get name => 'Json';
 
   @override
   void write(List<Software> software) {

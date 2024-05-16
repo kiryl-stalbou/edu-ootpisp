@@ -10,6 +10,9 @@ final class SoftwareWindowsFactory implements SoftwareFactory {
   static const _dimension = 50.0;
 
   @override
+  String get name => 'Windows';
+
+  @override
   InternetBrowser createInternetBrowser() => const InternetBrowser(
         name: 'Internet Browser (Windows)',
         cornerRadius: _cornerRadius,

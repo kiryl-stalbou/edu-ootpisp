@@ -10,6 +10,9 @@ final class SoftwareMacOSFactory implements SoftwareFactory {
   static const _cornerRadius = 8.0;
 
   @override
+  String get name => 'MacOS';
+
+  @override
   InternetBrowser createInternetBrowser() => const InternetBrowser(
         name: 'Internet Browser (MacOS)',
         cornerRadius: _cornerRadius,
